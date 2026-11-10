@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Holding the other constant</title>
+    <!--
+      Concept animation 3 (Session 1 - Linear regressions, Block 3).
+      What "controlling for mother's IQ" does to the high-school gap.
+      Opens on the two groups of children (mother finished high school: no/yes),
+      their means and the 11.8-point gap. The groups move to a right-hand panel and
+      a copy of every child flies to a left-hand scatterplot of score against
+      mother's IQ, where the model's IQ slope (0.56, holding high school constant)
+      is drawn through the pivot (mean IQ 100, mean score). Controlling for IQ =
+      rotating that slope to 0 around IQ 100: every child's score is adjusted by
+      -0.56 x (IQ - 100), in both panels at once. Low-IQ children rise, high-IQ
+      children fall, and the gap between the group means shrinks to 6.0 points,
+      exactly the mom_hs coefficient of kid_score ~ mom_hs + mom_iq. A dashed ghost
+      keeps the original 11.8 for comparison.
+      Silent, 30 s, loops seamlessly. Data: assets/data.js (animations/make_data.py).
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <script src="assets/data.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #ffffff; }
+      #root { position: relative; width: 100%; height: 100%; font-family: "Open Sans", sans-serif; }
+      #plot { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080">
+      <svg id="plot" class="clip" data-start="0" data-duration="30" data-track-index="0"
+           viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <script>
+      // ---------------------------------------------------------------- helpers
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.getElementById("plot");
+      const make = (tag, attrs = {}, parent = svg) => {
+        const e = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+        parent.appendChild(e);
+        return e;
+      };
+      const set = (e, attrs) => { for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); };
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      const prog = (t, t0, t1) => clamp((t - t0) / (t1 - t0));
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const E = {
+        inOut: (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2),
+        out: (p) => 1 - Math.pow(1 - p, 3),
+      };
+      const scale = (d0, d1, r0, r1) => (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0);
+      const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+
+      const C = { ink: "#595959", axis: "#BFBFBF", grid: "#EDEDED", dark: "#404040",
+                  grey: "#A6A6A6", sage: "#8BB57C", green: "#5E8C4F",
+                  blue: "#5B7FA6", blueFill: "#92B0D0" };
+      const PT = { 0: C.grey, 1: C.sage };    // children: no / yes high school
+      const LN = { 0: C.dark, 1: C.green };   // group means and IQ markers
+      const label = (txt, attrs, parent) => {
+        const e = make("text", { fill: C.ink, "font-size": 28, ...attrs }, parent);
+        e.textContent = txt;
+        return e;
+      };
+      // bold number with a white halo, readable over points
+      const counter = (attrs) => make("text", { "font-size": 32, "font-weight": 700, fill: C.blue,
+        stroke: "#ffffff", "stroke-width": 7, "paint-order": "stroke", "stroke-linejoin": "round",
+        opacity: 0, ...attrs });
+
+      // ---------------------------------------------------------------- data and model
+      const D = window.ANIM_DATA;
+      const DUR = 30;
+      const B_IQ = D.fit.b_iq;                  // IQ slope holding high school constant
+      const PIV_IQ = mean(D.iq);                // pivot: mean IQ (= 100.0)
+      const PIV_SCORE = mean(D.score);          // the slope line passes through the means
+      const GAP0 = D.mean_score[1] - D.mean_score[0];
+      // score of child i adjusted to the pivot IQ, by a fraction k of the adjustment
+      const adj = (i, k) => D.score[i] - k * B_IQ * (D.iq[i] - PIV_IQ);
+      const meanAdj = (hs, k) => D.mean_score[hs] - k * B_IQ * (D.mean_iq[hs] - PIV_IQ);
+
+      // ---------------------------------------------------------------- layout
+      const P = { t: 60, b: 880, l: 200, r: 1830 };   // shared y-scale for both panels
+      const Y = scale(15, 150, P.b, P.t);
+      const XL = scale(68, 142, 200, 960);            // left panel: mother's IQ
+      const RP = 1110;                                // right panel left edge
+      const COL_O = { 0: 700, 1: 1330 }, JIT_O = 125, BX_O = 1015;   // opening: full width
+      const COL_R = { 0: 1290, 1: 1650 }, JIT_R = 80, BX_R = 1450;   // after the split
+      const GHOST_X = 1505;
+
+      // horizontal grid across both panels (same scale) and the shared y axis
+      const gStatic = make("g");
+      for (const v of [20, 40, 60, 80, 100, 120, 140]) {
+        make("line", { x1: P.l, x2: P.r, y1: Y(v), y2: Y(v), stroke: C.grid, "stroke-width": 2 }, gStatic);
+        label(String(v), { x: P.l - 20, y: Y(v) + 10, "text-anchor": "end" }, gStatic);
+      }
+      make("line", { x1: P.l, x2: P.l, y1: P.t, y2: P.b, stroke: C.axis, "stroke-width": 2.5 }, gStatic);
+      label("Child's test score", { x: 0, y: 0, "text-anchor": "middle", "font-size": 32,
+            transform: `translate(${P.l - 92} ${(P.t + P.b) / 2}) rotate(-90)` }, gStatic);
+
+      // categorical axis (full width at the start, right panel after the split)
+      const catSpine = make("line", { y1: P.b, y2: P.b, x2: P.r, stroke: C.axis, "stroke-width": 2.5 });
+      const catNo = label("no", { y: P.b + 44, "text-anchor": "middle" });
+      const catYes = label("yes", { y: P.b + 44, "text-anchor": "middle" });
+      const catTitle = label("Mother finished high school", { y: P.b + 100, "text-anchor": "middle", "font-size": 32 });
+      const rightSpine = make("line", { x1: RP, x2: RP, y1: P.t, y2: P.b, stroke: C.axis, "stroke-width": 2.5, opacity: 0 });
+
+      // left panel: mother's IQ axis
+      const gIQ = make("g", { opacity: 0 });
+      for (let v = 70; v <= 140; v += 10) {
+        make("line", { x1: XL(v), x2: XL(v), y1: P.t, y2: P.b, stroke: C.grid, "stroke-width": 2 }, gIQ);
+        label(String(v), { x: XL(v), y: P.b + 44, "text-anchor": "middle" }, gIQ);
+      }
+      label("Mother's IQ", { x: (XL(68) + XL(142)) / 2, y: P.b + 100, "text-anchor": "middle", "font-size": 32 }, gIQ);
+      const iqSpine = make("line", { x1: P.l, y1: P.b, y2: P.b, stroke: C.axis, "stroke-width": 2.5 });
+
+      // pivot guide, children (right panel, left panel), slope line, means, brackets, labels
+      const pivotGuide = make("line", { x1: XL(PIV_IQ), x2: XL(PIV_IQ), y1: P.t, y2: P.b,
+                                        stroke: C.axis, "stroke-width": 3, "stroke-dasharray": "8 8", opacity: 0 });
+      const gRight = make("g"), gLeft = make("g");
+      const ptsR = D.score.map((s, i) => make("circle", { r: 6.5, fill: PT[D.hs[i]], opacity: 0 }, gRight));
+      const ptsL = D.score.map((s, i) => make("circle", { r: 6.5, fill: PT[D.hs[i]], opacity: 0 }, gLeft));
+      const slopeLine = make("line", { stroke: C.blue, "stroke-width": 7, opacity: 0 });
+      const pivotDot = make("circle", { cx: XL(PIV_IQ), r: 10, fill: "#ffffff", stroke: C.blue, "stroke-width": 5, opacity: 0 });
+      const markers = [0, 1].map((hs) => make("path", { d: "M -22 -38 L 22 -38 L 0 0 Z", fill: LN[hs], opacity: 0 }));
+      const guides = [0, 1].map((hs) => make("line", { stroke: LN[hs], "stroke-width": 3, "stroke-dasharray": "6 8", opacity: 0 }));
+      const means = [0, 1].map((hs) => make("circle", { r: 0, fill: LN[hs], stroke: "#ffffff", "stroke-width": 5 }));
+      const makeBracket = (attrs) => {
+        const g = make("g", { opacity: 0 });
+        const parts = [0, 1, 2].map(() => make("line", { stroke: C.blue, "stroke-width": 7, ...attrs }, g));
+        return { g, draw: (x, y1, y2) => {
+          set(parts[0], { x1: x, x2: x, y1, y2 });
+          set(parts[1], { x1: x - 22, x2: x + 22, y1, y2: y1 });
+          set(parts[2], { x1: x - 22, x2: x + 22, y1: y2, y2 });
+        } };
+      };
+      const ghost = makeBracket({ stroke: C.blueFill, "stroke-dasharray": "10 8" });
+      const bracket = makeBracket({});
+      const gapLabel = counter({ "text-anchor": "end" });
+      const ghostLabel = counter({ "text-anchor": "middle", fill: C.blueFill });
+      ghostLabel.textContent = GAP0.toFixed(1);
+      const slopeLabel = counter({ "text-anchor": "end" });
+
+      // ---------------------------------------------------------------- timeline
+      function render(t) {
+        const split = E.inOut(prog(t, 6.0, 8.0)) - E.inOut(prog(t, 28.4, 29.8));   // full width <-> panels
+        const iqAxis = E.inOut(prog(t, 7.4, 9.0)) - E.inOut(prog(t, 28.0, 28.8));
+        const k = E.inOut(prog(t, 15.6, 21.6));                                    // controlling for IQ
+        const out = 1 - prog(t, 27.4, 28.0);                                       // end fade
+
+        // axes
+        set(catSpine, { x1: lerp(P.l, RP, split) });
+        set(catNo, { x: lerp(COL_O[0], COL_R[0], split) });
+        set(catYes, { x: lerp(COL_O[1], COL_R[1], split) });
+        set(catTitle, { x: lerp((P.l + P.r) / 2, (RP + P.r) / 2, split) });
+        set(rightSpine, { opacity: split });
+        set(gIQ, { opacity: iqAxis });
+        set(iqSpine, { x2: lerp(P.l, XL(142), iqAxis), opacity: iqAxis > 0 ? 1 : 0 });
+
+        // children: right panel (columns) and left panel (score vs IQ), same adjusted score
+        D.score.forEach((s, i) => {
+          const d = D.delay[i], hs = D.hs[i];
+          const y = Y(adj(i, k));
+          const colX = lerp(COL_O[hs] + JIT_O * D.jitter[i], COL_R[hs] + JIT_R * D.jitter[i], split);
+          const fadeOut = 1 - prog(t, 27.4 + 0.4 * d, 27.9 + 0.4 * d);
+          set(ptsR[i], { cx: colX, cy: y, opacity: 0.75 * prog(t, 0.2 + d, 0.6 + d) * fadeOut });
+          // a copy of each child flies from its column to its place in the IQ scatterplot
+          const t0 = 8.6 + 1.2 * d;
+          const fly = E.inOut(prog(t, t0, t0 + 2.0));
+          set(ptsL[i], { cx: lerp(COL_R[hs] + JIT_R * D.jitter[i], XL(D.iq[i]), fly), cy: y,
+                         opacity: 0.75 * prog(t, t0, t0 + 0.2) * fadeOut });
+        });
+
+        // group means (right panel), dotted guides and the gap bracket between them
+        const bx = lerp(BX_O, BX_R, split);
+        const grow = E.out(prog(t, 3.0, 4.0));
+        const m0 = meanAdj(0, k), m1 = meanAdj(1, k), mid = (m0 + m1) / 2;
+        [0, 1].forEach((hs) => {
+          const mx = lerp(COL_O[hs], COL_R[hs], split);
+          const my = Y(hs ? m1 : m0);
+          set(means[hs], { cx: mx, cy: my, r: 20 * E.out(prog(t, 1.6 + 0.2 * hs, 2.4 + 0.2 * hs)), opacity: out });
+          const pg = E.out(prog(t, 2.6, 3.4));
+          set(guides[hs], { x1: mx, x2: lerp(mx, bx, pg), y1: my, y2: my, opacity: pg > 0 ? 0.8 * out : 0 });
+        });
+        const lo = lerp(mid, m0, grow), hi = lerp(mid, m1, grow);
+        bracket.draw(bx, Y(lo), Y(hi));
+        set(bracket.g, { opacity: grow > 0 ? out : 0 });
+        gapLabel.textContent = (m1 - m0).toFixed(1);
+        // baseline slightly above the bracket's middle, clear of the guide at its lower end
+        set(gapLabel, { x: bx - 22, y: Y(mid) + 2, opacity: prog(t, 3.6, 4.2) * out });
+
+        // ghost of the original gap, sharing the base of the current one (from 15 s)
+        const gOp = prog(t, 15.0, 15.6) * out;
+        ghost.draw(GHOST_X, Y(m0), Y(m0 + GAP0));
+        set(ghost.g, { opacity: gOp });
+        set(ghostLabel, { x: GHOST_X, y: Y(m0 + GAP0) - 16, opacity: gOp });   // above its top cap
+
+        // left panel: each group's mean IQ (11.6–12.9 s)
+        [0, 1].forEach((hs) => {
+          const p = E.out(prog(t, 11.6 + 0.3 * hs, 12.4 + 0.3 * hs));
+          set(markers[hs], { transform: `translate(${XL(D.mean_iq[hs])} ${P.b - 6 - 40 * (1 - p)})`,
+                             opacity: p * out });
+        });
+
+        // left panel: the IQ slope through the pivot (12.6–14.4 s), then rotated to 0
+        const slope = B_IQ * (1 - k);
+        const ls = (iq) => Y(PIV_SCORE + slope * (iq - PIV_IQ));
+        const pl = E.inOut(prog(t, 12.6, 14.4));
+        const xe = lerp(70, 140, pl);
+        set(slopeLine, { x1: XL(70), y1: ls(70), x2: XL(xe), y2: ls(xe), opacity: pl > 0 ? out : 0 });
+        set(pivotDot, { cy: Y(PIV_SCORE), opacity: prog(t, 12.6, 13.2) * out });
+        set(pivotGuide, { opacity: 0.9 * prog(t, 12.6, 13.2) * out });
+        slopeLabel.textContent = `slope ${slope.toFixed(2)}`;
+        set(slopeLabel, { x: XL(140), y: ls(140) - 22, opacity: prog(t, 14.2, 14.8) * out });
+      }
+
+      const clock = { t: 0 };
+      const tl = gsap.timeline({ paused: true });
+      tl.to(clock, { t: DUR, duration: DUR, ease: "none", onUpdate: () => render(clock.t) }, 0);
+      render(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

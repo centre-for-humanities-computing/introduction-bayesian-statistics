@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear Regressions Quiz</title>
+<meta name="description" content="Session 1 - Linear regressions: 15 multiple-choice questions with instant corrections.">
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --text: #404040;
+    --text-soft: #595959;
+    --muted: #8C8C8C;
+    --card: #F2F2F2;
+    --bar: #EDEDED;
+    --line: #DADADA;
+    --blue: #5B7FA6;
+    --blue-light: #DCE6F1;
+    --rose: #BC6D86;
+    --rose-dark: #855669;
+    --rose-light: #F4E3E9;
+    --sage: #5E8C4F;
+    --sage-light: #E2EFDC;
+    --wrong: #404040;
+    --code-bg: #F2F2F2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1C1C1C;
+      --text: #E8E8E8;
+      --text-soft: #CFCFCF;
+      --muted: #9A9A9A;
+      --card: #2A2A2A;
+      --bar: #333333;
+      --line: #444444;
+      --blue: #92B0D0;
+      --blue-light: #2A3540;
+      --rose: #D08AA0;
+      --rose-dark: #E0A9BA;
+      --rose-light: #3A2A30;
+      --sage: #8BB57C;
+      --sage-light: #26331F;
+      --wrong: #E8E8E8;
+      --code-bg: #262626;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Lao UI", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+  header .event { color: var(--rose-dark); font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+  header h1 { font-size: 32px; line-height: 1.15; margin: 4px 0 6px; color: var(--text); }
+  header p { margin: 0; color: var(--text-soft); }
+  .rule { width: 72px; height: 3px; background: #92B0D0; border-radius: 2px; margin: 18px 0 22px; }
+
+  .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; font-size: 14px; color: var(--muted); }
+  .track { flex: 1; height: 8px; background: var(--bar); border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--blue); border-radius: 99px; transition: width .3s ease; }
+
+  .pill { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 10px; border-radius: 99px; background: var(--bar); color: var(--text-soft); }
+  .question h2 { font-size: 21px; line-height: 1.35; margin: 12px 0 14px; font-weight: 700; }
+  pre { background: var(--code-bg); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-family: Consolas, Menlo, "SFMono-Regular", monospace; font-size: 14px; line-height: 1.45; margin: 0 0 16px; }
+  code { font-family: Consolas, Menlo, "SFMono-Regular", monospace; font-size: .92em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  figure { margin: 0 0 16px; background: var(--card); border-radius: 12px; padding: 10px; }
+  figure svg { display: block; width: 100%; height: auto; }
+
+  .options { display: grid; gap: 10px; }
+  .option {
+    display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left;
+    background: var(--card); color: var(--text); border: 2px solid transparent; border-radius: 12px;
+    padding: 12px 14px; font: inherit; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .option:hover:not(:disabled) { border-color: var(--line); }
+  .option:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .option:disabled { cursor: default; }
+  .letter { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #595959; color: #FFF; font-weight: 700; font-size: 14px; display: grid; place-items: center; margin-top: 1px; }
+  .option.correct { border-color: var(--sage); background: var(--sage-light); }
+  .option.correct .letter { background: var(--sage); }
+  .option.wrong { border-color: var(--wrong); border-style: dashed; }
+  .option.wrong .text { text-decoration: line-through; text-decoration-thickness: 1px; }
+  .option.dim { opacity: .55; }
+
+  .feedback { margin-top: 16px; border-radius: 12px; padding: 14px 16px 14px 18px; background: var(--card); position: relative; }
+  .feedback::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 5px; border-radius: 3px; background: var(--accent); }
+  .feedback .verdict { font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .feedback .ref { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .btn { font: inherit; font-weight: 700; border: none; border-radius: 99px; padding: 10px 22px; cursor: pointer; background: #595959; color: #FFF; }
+  .btn.secondary { background: var(--bar); color: var(--text); }
+  .btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 10px; text-align: right; }
+
+  .score { font-size: 56px; font-weight: 700; line-height: 1; margin: 6px 0; }
+  .score small { font-size: 22px; color: var(--muted); font-weight: 400; }
+  .blocks { display: grid; gap: 12px; margin: 22px 0; }
+  .block-row { display: grid; grid-template-columns: minmax(150px, 220px) 1fr 48px; gap: 12px; align-items: center; font-size: 15px; }
+  .block-row .track { height: 12px; }
+  .block-row .fill { background: var(--sage); }
+  .missed h3 { font-size: 18px; margin: 26px 0 10px; }
+  .missed details { background: var(--card); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .missed summary { cursor: pointer; font-weight: 700; }
+  .missed .answer { margin-top: 8px; color: var(--sage); font-weight: 700; }
+  footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
+  @media (max-width: 560px) {
+    header h1 { font-size: 26px; }
+    .question h2 { font-size: 19px; }
+    .block-row { grid-template-columns: 1fr 48px; }
+    .block-row .track { grid-column: 1 / -1; grid-row: 2; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="event">Introduction to Bayesian Statistics · Center for Humanities Computing</div>
+    <h1>Session 1 - Linear regressions: quiz</h1>
+    <p>15 questions with instant corrections. Nothing is recorded: everything runs in your browser.</p>
+    <div class="rule"></div>
+  </header>
+  <section id="app" aria-live="polite"></section>
+  <footer>Keyboard: press 1–4 (or A–D) to answer, Enter to continue.</footer>
+</main>
+
+<script>
+/*
+ * Quiz content. Each question:
+ *   block   1, 2 or 3 (course block)
+ *   q       question (HTML)
+ *   pre     optional code / output shown as plain text
+ *   svg     optional inline figure (HTML)
+ *   options four answers (HTML)
+ *   answer  index of the correct option (0-3)
+ *   explain explanation shown after answering (HTML)
+ *   ref     where to look in the course material
+ *
+ * Hook for later (e.g. live class results): define window.onQuizAnswer = function (event) {...}
+ * before this script runs or at any time; it receives {id, block, choice, correct}.
+ * Nothing is sent anywhere unless such a function is added.
+ */
+const BLOCKS = {
+  1: "1 · Fitting a line",
+  2: "2 · How sure are we?",
+  3: "3 · More than one predictor",
+};
+
+const INTERACTION_SVG = `
+<svg viewBox="0 0 520 260" role="img" aria-label="Scatter plot of child test score against centered mother IQ with two fitted lines of different slopes that cross">
+  <style>.ax{stroke:#A6A6A6;stroke-width:1.5}.t{font:13px system-ui,sans-serif;fill:#8C8C8C}</style>
+  <line class="ax" x1="50" y1="220" x2="500" y2="220"/><line class="ax" x1="50" y1="20" x2="50" y2="220"/>
+  <text class="t" x="275" y="252" text-anchor="middle">mom_iq_c</text>
+  <text class="t" x="18" y="120" text-anchor="middle" transform="rotate(-90 18 120)">kid_score</text>
+  <g fill="#A6A6A6" opacity=".7">
+    <circle cx="80" cy="190" r="3.5"/><circle cx="110" cy="170" r="3.5"/><circle cx="140" cy="185" r="3.5"/><circle cx="170" cy="150" r="3.5"/><circle cx="210" cy="140" r="3.5"/><circle cx="250" cy="120" r="3.5"/><circle cx="300" cy="105" r="3.5"/><circle cx="360" cy="80" r="3.5"/>
+  </g>
+  <g fill="#8BB57C" opacity=".8">
+    <circle cx="90" cy="140" r="3.5"/><circle cx="130" cy="130" r="3.5"/><circle cx="180" cy="125" r="3.5"/><circle cx="230" cy="120" r="3.5"/><circle cx="280" cy="112" r="3.5"/><circle cx="330" cy="100" r="3.5"/><circle cx="390" cy="95" r="3.5"/><circle cx="440" cy="85" r="3.5"/><circle cx="470" cy="75" r="3.5"/>
+  </g>
+  <line x1="60" y1="205" x2="480" y2="45" stroke="#404040" stroke-width="4" stroke-linecap="round"/>
+  <line x1="60" y1="148" x2="480" y2="72" stroke="#5E8C4F" stroke-width="4" stroke-linecap="round"/>
+  <text x="488" y="45" style="font:13px system-ui,sans-serif;fill:#404040" text-anchor="end" dy="-8">mom_hs = 0</text>
+  <text x="488" y="72" style="font:13px system-ui,sans-serif;fill:#5E8C4F" text-anchor="end" dy="18">mom_hs = 1</text>
+</svg>`;
+
+const QUESTIONS = [
+  // ---------------------------------------------------------------- Block 1
+  {
+    block: 1,
+    q: "A fitted line is <code>time = 0.56 + 0.79 × words</code>, where <code>words</code> is the text length in hundreds of words and <code>time</code> the reading time in minutes. What does <strong>0.79</strong> mean?",
+    options: [
+      "The predicted reading time of a text with 0 words.",
+      "Each extra 100 words adds about 0.79 minutes to the predicted reading time.",
+      "79% of the variation in reading time is explained by text length.",
+      "The typical distance between the points and the line.",
+    ],
+    answer: 1,
+    explain: "The slope is the change in the predicted outcome when the predictor increases by one unit, and one unit of <code>words</code> is 100 words. The first option describes the intercept (0.56), the last one describes σ, and the third one describes R².",
+    ref: "Slides: What is a regression line · Notebook 1, section 2",
+  },
+  {
+    block: 1,
+    q: "What does the least-squares method choose?",
+    options: [
+      "The line with the smallest sum of squared vertical distances (residuals) between the points and the line.",
+      "The line that passes exactly through as many points as possible.",
+      "The line with the smallest plain sum of residuals.",
+      "The line connecting the first and the last data point.",
+    ],
+    answer: 0,
+    explain: "Residuals can be positive or negative, so a plain sum lets them cancel out: many bad lines have a residual sum of zero. Squaring makes every residual count positively and penalises large misses more.",
+    ref: "Slides: Least squares · Notebook 1, sections 2–3",
+  },
+  {
+    block: 1,
+    q: "The reading-time model estimates <strong>σ = 1.0 minute</strong>. What does this tell you?",
+    options: [
+      "The slope is known up to ±1 minute.",
+      "The intercept is 1 minute.",
+      "Individual texts typically lie about 1 minute above or below the line.",
+      "Every prediction of the model is wrong by exactly 1 minute.",
+    ],
+    answer: 2,
+    explain: "σ is the standard deviation of the errors: the typical spread of the observations around the line. It says nothing about how precisely the slope is estimated; that is the standard error.",
+    ref: "Slides: How to represent uncertainty?",
+  },
+  {
+    block: 1,
+    q: "When do least squares and maximum likelihood give exactly the same line?",
+    options: [
+      "Never: they are two different methods.",
+      "Only with very large samples.",
+      "Only when the true slope is 0.",
+      "When the errors are assumed to follow a Normal distribution.",
+    ],
+    answer: 3,
+    explain: "With Normal errors, the log-likelihood equals a constant minus the residual sum of squares divided by 2σ². Maximising the likelihood is therefore the same as minimising RSS: same line, two stories.",
+    ref: "Slides: Maximum likelihood · Notebook 1, section 3",
+  },
+  // ---------------------------------------------------------------- Block 2
+  {
+    block: 2,
+    q: "statsmodels reports a standard error of <strong>0.053</strong> for the slope. What is a standard error?",
+    pre: "                 coef    std err\nwords          0.7857      0.053",
+    options: [
+      "How much the estimated slope would vary from study to study if the study were repeated many times.",
+      "The standard deviation of the reading times.",
+      "The probability that the estimated slope is wrong.",
+      "The average size of the residuals.",
+    ],
+    answer: 0,
+    explain: "The standard error is the spread of the sampling distribution of the estimate. In Notebook 2 we repeated the study 2000 times (same 40 texts, new reading times): the SD of the slopes (≈ 0.054) was almost exactly the 0.053 that statsmodels estimated from a single dataset.",
+    ref: "Slides: The standard error · Notebook 2, section 2",
+  },
+  {
+    block: 2,
+    q: "Which interpretation of this 95% <strong>confidence</strong> interval is correct?",
+    pre: "                 [0.025      0.975]\nwords             0.679       0.892",
+    options: [
+      "There is a 95% probability that the true slope lies between 0.679 and 0.892.",
+      "95% of the texts have a slope between 0.679 and 0.892.",
+      "If we repeated the study many times, 95% of the intervals computed this way would contain the true slope.",
+      "In 95% of future studies, the estimated slope will lie between 0.679 and 0.892.",
+    ],
+    answer: 2,
+    explain: "The 95% describes the <em>procedure</em> over repeated studies. Our particular interval either contains the true slope or not. The first option is the reading of a Bayesian <em>credible</em> interval.",
+    ref: "Slides: Confidence intervals, What a 95% CI is not · Notebook 2, section 3",
+  },
+  {
+    block: 2,
+    q: "A study reports <strong>p = 0.003</strong> for a slope. What does this mean?",
+    options: [
+      "There is a 0.3% probability that the true slope is 0.",
+      "If the true slope were 0, a slope at least this far from 0 would occur only about 0.3% of the time.",
+      "The effect is large and important.",
+      "There is a 99.7% probability that the result will replicate.",
+    ],
+    answer: 1,
+    explain: "A p-value is computed <em>assuming</em> the null hypothesis is true, so it cannot be the probability that the null is true. It also says nothing about the size or importance of the effect, nor about replication.",
+    ref: "Slides: p-values · Notebook 2, section 4",
+  },
+  {
+    block: 2,
+    q: "In the Bayesian approach, what is described by a probability distribution once the data are observed?",
+    options: [
+      "The data.",
+      "The sample size.",
+      "The p-value.",
+      "The parameters (intercept, slope, σ).",
+    ],
+    answer: 3,
+    explain: "Bayesian inference treats the observed data as fixed and expresses uncertainty about the parameters with a distribution: the posterior. Frequentist inference does the opposite: parameters are fixed, and the data are imagined to vary over repeated samples.",
+    ref: "Slides (appendix): The Bayesian route, Side by side · Notebook 2, sections 5–7",
+  },
+  {
+    block: 2,
+    q: "A study of <strong>10</strong> texts finds a slope of 0.30 minutes per 100 words, with a 95% confidence interval of <strong>[−0.10, 0.70]</strong>. What can you conclude?",
+    options: [
+      "Text length has no effect on reading time.",
+      "There is a 95% probability that the true slope is 0.",
+      "The slope is not significant, so it should be reported as 0.",
+      "The data are compatible with no effect, but also with sizeable effects: this study cannot tell them apart.",
+    ],
+    answer: 3,
+    explain: "An interval that includes 0 means the data cannot rule out 0, but they cannot rule out 0.6 either. Not rejected ≠ accepted: the effect may be small, or the study too small (with 10 texts the interval is wide). In Notebook 2, a true slope of 0.05 gave p ≈ 0.26.",
+    ref: "Slides: What a 95% CI is not · Notebook 2, section 4",
+  },
+  {
+    block: 2,
+    q: "With <strong>8</strong> texts and a strong prior <code>slope ~ Normal(0.4, 0.1)</code>, the posterior mean is 0.48 while least squares gives 0.59. What happens with <strong>400</strong> texts?",
+    options: [
+      "The posterior stays close to 0.4, because the prior is strong.",
+      "The least-squares estimate moves towards 0.4.",
+      "The data dominate: the posterior mean and the least-squares estimate become almost identical.",
+      "The Bayesian model can no longer be fitted.",
+    ],
+    answer: 2,
+    explain: "The more data, the more the likelihood dominates the prior. With 400 texts both approaches give ≈ 0.80. Priors matter most when data are scarce, which is why they must be stated and justified.",
+    ref: "Slides (appendix): When do they disagree? · Notebook 2, section 8",
+  },
+  // ---------------------------------------------------------------- Block 3
+  {
+    block: 3,
+    q: "The model <code>kid_score ~ mom_hs</code> (mom_hs = 1 if the mother finished high school) gives the output below. What is the average score of children whose mothers <strong>finished</strong> high school?",
+    pre: "Intercept    77.55\nmom_hs       11.77",
+    options: [
+      "11.8",
+      "77.5",
+      "66.7",
+      "89.3",
+    ],
+    answer: 3,
+    explain: "With a 0/1 predictor, the intercept is the mean of the group coded 0 (77.5) and the slope is the difference between the two group means. The mean for mom_hs = 1 is therefore 77.5 + 11.8 = 89.3.",
+    ref: "Slides: A binary predictor · Notebook 3, section 2",
+  },
+  {
+    block: 3,
+    q: "A newspaper reads <code>kid_score = 82.1 + 6.0 × mom_hs + 0.56 × mom_iq_c</code> and writes: <em>“Finishing high school raises children's scores by 6 points.”</em> What is the problem?",
+    options: [
+      "The data are observational: families where the mother finished high school differ in other ways (income, home environment…) that are not in the model. 6.0 compares families; it is not the effect of an intervention.",
+      "None: 6.0 is the effect of finishing high school.",
+      "It should say 11.8 points, the gap without IQ in the model.",
+      "The coefficient is not statistically significant (95% CI [1.6, 10.3]).",
+    ],
+    answer: 0,
+    explain: "A regression on observational data compares <em>different</em> families; it does not tell what would change <em>within</em> a family if the mother finished high school. Only the variables in the model are held equal. The interval [1.6, 10.3] excludes 0, so the last option is wrong too.",
+    ref: "Slides: Real data, Two predictors · Notebook 3, sections 1 and 4",
+  },
+  {
+    block: 3,
+    q: "In <code>kid_score = 82.1 + 6.0 × mom_hs + 0.56 × mom_iq_c</code>, what does <strong>6.0</strong> mean?",
+    options: [
+      "Comparing mothers with the <em>same IQ</em>, children of mothers who finished high school score about 6 points higher on average.",
+      "Finishing high school causes the child's score to rise by 6 points.",
+      "Children of mothers who finished high school score 6 points higher on average, ignoring IQ.",
+      "High school explains 6% of the variation in scores.",
+    ],
+    answer: 0,
+    explain: "In a model with several predictors, each coefficient compares units that are equal on the other predictors. The data are observational, so a causal reading (second option) is not justified. Ignoring IQ, the gap is 11.8, not 6.",
+    ref: "Slides: Two predictors · Notebook 3, section 4",
+  },
+  {
+    block: 3,
+    q: "Alone, <code>mom_hs</code> has a coefficient of <strong>11.8</strong>. With <code>mom_iq</code> also in the model it drops to <strong>6.0</strong>. Why?",
+    options: [
+      "The model with two predictors is wrong.",
+      "Adding a predictor always halves the other coefficients.",
+      "mom_hs and mom_iq are correlated: part of the high-school gap went together with differences in IQ.",
+      "It is random noise; the two numbers are not comparable.",
+    ],
+    answer: 2,
+    explain: "Mothers who finished high school have a higher IQ on average (102 vs 92). On its own, <code>mom_hs</code> captures that IQ difference too; once IQ is in the model, it only captures the gap at equal IQ. A coefficient's meaning depends on what else is in the model.",
+    ref: "Slides: Two predictors, and the animation after it · Notebook 3, section 4",
+  },
+  {
+    block: 3,
+    q: "The figure shows one fitted line per group, and the lines are <strong>not parallel</strong>. Which model formula produced it?",
+    svg: INTERACTION_SVG,
+    options: [
+      "<code>kid_score ~ mom_hs + mom_iq_c</code>",
+      "<code>kid_score ~ mom_hs * mom_iq_c</code>",
+      "<code>kid_score ~ mom_iq_c</code>",
+      "<code>kid_score ~ mom_hs</code>",
+    ],
+    answer: 1,
+    explain: "<code>mom_hs * mom_iq_c</code> adds both predictors <em>and</em> their interaction, so each group gets its own IQ slope. With <code>+</code> only, the model forces the same slope in both groups: parallel lines.",
+    ref: "Slides: Teaser: interactions · Notebook 3, section 6",
+  },
+];
+
+// ----------------------------------------------------------------------------
+const app = document.getElementById("app");
+const LETTERS = ["A", "B", "C", "D"];
+let order = [];      // indices of QUESTIONS for this round
+let pos = 0;         // position in `order`
+let results = {};    // question index -> true/false (latest attempt)
+let answered = false;
+
+function el(tag, attrs = {}, html = "") {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (html) e.innerHTML = html;
+  return e;
+}
+
+function start(indices) {
+  order = indices;
+  pos = 0;
+  render();
+}
+
+function render() {
+  answered = false;
+  const idx = order[pos];
+  const item = QUESTIONS[idx];
+  app.innerHTML = "";
+
+  const prog = el("div", { class: "progress" });
+  prog.append(el("span", {}, `Question ${pos + 1} of ${order.length}`));
+  const track = el("div", { class: "track", role: "progressbar", "aria-valuemin": 0,
+    "aria-valuemax": order.length, "aria-valuenow": pos });
+  const fill = el("div", { class: "fill" });
+  fill.style.width = `${(pos / order.length) * 100}%`;
+  track.append(fill);
+  prog.append(track);
+  app.append(prog);
+
+  const q = el("div", { class: "question" });
+  q.append(el("span", { class: "pill" }, BLOCKS[item.block]));
+  q.append(el("h2", {}, item.q));
+  if (item.svg) q.append(el("figure", {}, item.svg));
+  if (item.pre) {
+    const pre = el("pre");
+    pre.textContent = item.pre;
+    q.append(pre);
+  }
+  const opts = el("div", { class: "options", role: "group", "aria-label": "Answers" });
+  item.options.forEach((text, i) => {
+    const b = el("button", { class: "option", type: "button", "data-i": i });
+    b.append(el("span", { class: "letter", "aria-hidden": "true" }, LETTERS[i]));
+    b.append(el("span", { class: "text" }, text));
+    b.addEventListener("click", () => choose(i));
+    opts.append(b);
+  });
+  q.append(opts);
+  q.append(el("div", { id: "after" }));
+  app.append(q);
+  opts.querySelector("button").focus({ preventScroll: true });
+}
+
+function choose(i) {
+  if (answered) return;
+  answered = true;
+  const idx = order[pos];
+  const item = QUESTIONS[idx];
+  const correct = i === item.answer;
+  results[idx] = correct;
+
+  app.querySelectorAll(".option").forEach((b, j) => {
+    b.disabled = true;
+    if (j === item.answer) b.classList.add("correct");
+    else if (j === i) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+
+  const fb = el("div", { class: "feedback" });
+  fb.style.setProperty("--accent", correct ? "var(--sage)" : "var(--wrong)");
+  fb.append(el("div", { class: "verdict" }, correct ? "✓ Correct" :
+    `✗ Not quite: the answer is ${LETTERS[item.answer]}`));
+  fb.append(el("div", {}, item.explain));
+  fb.append(el("div", { class: "ref" }, `See: ${item.ref}`));
+
+  const actions = el("div", { class: "actions" });
+  const last = pos === order.length - 1;
+  const next = el("button", { class: "btn", type: "button" }, last ? "See my results" : "Next question →");
+  next.addEventListener("click", () => {
+    if (last) finish();
+    else { pos += 1; render(); }
+  });
+  actions.append(next);
+  const after = document.getElementById("after");
+  after.append(fb, actions);
+  next.focus({ preventScroll: true });
+  fb.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  if (typeof window.onQuizAnswer === "function") {
+    try { window.onQuizAnswer({ id: idx + 1, block: item.block, choice: i, correct }); }
+    catch (e) { console.warn("onQuizAnswer failed", e); }
+  }
+}
+
+function finish() {
+  app.innerHTML = "";
+  const all = QUESTIONS.map((_, i) => i);
+  const nCorrect = all.filter(i => results[i]).length;
+  app.append(el("span", { class: "pill" }, "Results"));
+  app.append(el("div", { class: "score" }, `${nCorrect}<small> / ${QUESTIONS.length}</small>`));
+  app.append(el("p", {}, nCorrect === QUESTIONS.length ? "Perfect score! 🎉" :
+    nCorrect >= 11 ? "Well done. Have a look at the questions you missed below." :
+    "Good effort. Review the questions below with the slides and notebooks."));
+
+  const blocks = el("div", { class: "blocks" });
+  for (const b of [1, 2, 3]) {
+    const qs = all.filter(i => QUESTIONS[i].block === b);
+    const ok = qs.filter(i => results[i]).length;
+    const row = el("div", { class: "block-row" });
+    row.append(el("span", {}, BLOCKS[b]));
+    const track = el("div", { class: "track" });
+    const fill = el("div", { class: "fill" });
+    fill.style.width = `${(ok / qs.length) * 100}%`;
+    track.append(fill);
+    row.append(track, el("span", {}, `${ok}/${qs.length}`));
+    blocks.append(row);
+  }
+  app.append(blocks);
+
+  const missed = all.filter(i => results[i] !== true);
+  if (missed.length) {
+    const box = el("div", { class: "missed" });
+    box.append(el("h3", {}, `Questions to review (${missed.length})`));
+    for (const i of missed) {
+      const item = QUESTIONS[i];
+      const d = el("details");
+      d.append(el("summary", {}, `Q${i + 1}. ${item.q}`));
+      d.append(el("div", { class: "answer" }, `✓ ${LETTERS[item.answer]}. ${item.options[item.answer]}`));
+      d.append(el("div", {}, item.explain));
+      d.append(el("div", { class: "ref" }, `See: ${item.ref}`));
+      box.append(d);
+    }
+    app.append(box);
+  }
+
+  const actions = el("div", { class: "actions" });
+  if (missed.length) {
+    const retry = el("button", { class: "btn", type: "button" }, `Retry the ${missed.length} missed`);
+    retry.addEventListener("click", () => start(missed));
+    actions.append(retry);
+  }
+  const again = el("button", { class: "btn secondary", type: "button" }, "Start over");
+  again.addEventListener("click", () => { results = {}; start(all); });
+  actions.append(again);
+  app.append(actions);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const key = e.key.toUpperCase();
+  const n = "1234".indexOf(key) >= 0 ? "1234".indexOf(key) : LETTERS.indexOf(key);
+  if (!answered && n >= 0 && document.querySelector(".option")) {
+    e.preventDefault();
+    choose(n);
+  }
+});
+
+start(QUESTIONS.map((_, i) => i));
+</script>
+</body>
+</html>

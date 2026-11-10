@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Repeat the study</title>
+    <!--
+      Concept animation 2 (Session 1 - Linear regressions, Block 2).
+      Where the standard error comes from: the study is repeated 200 times
+      (simulated). Each repetition gives a new least-squares line (blue) and its
+      slope drops as a brick onto a histogram around the true slope (green).
+      The spread of that histogram is the standard error (bracket = ±1 SD).
+      Silent, 25 s, loops seamlessly. Data: assets/data.js (animations/make_data.py).
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <script src="assets/data.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #ffffff; }
+      #root { position: relative; width: 100%; height: 100%; font-family: "Open Sans", sans-serif; }
+      #plot { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="25" data-width="1920" data-height="1080">
+      <svg id="plot" class="clip" data-start="0" data-duration="25" data-track-index="0"
+           viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <script>
+      // ---------------------------------------------------------------- helpers
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.getElementById("plot");
+      const make = (tag, attrs = {}, parent = svg) => {
+        const e = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+        parent.appendChild(e);
+        return e;
+      };
+      const set = (e, attrs) => { for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); };
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      const prog = (t, t0, t1) => clamp((t - t0) / (t1 - t0));
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const E = {
+        inOut: (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2),
+        out: (p) => 1 - Math.pow(1 - p, 3),
+        fall: (p) => p * p,
+      };
+      const scale = (d0, d1, r0, r1) => (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0);
+
+      const C = { ink: "#595959", axis: "#BFBFBF", grid: "#EDEDED", green: "#5E8C4F",
+                  blue: "#5B7FA6", blueFill: "#92B0D0" };
+
+      function axes(o) {
+        const g = make("g");
+        for (const v of o.yticks) make("line", { x1: o.P.l, x2: o.P.r, y1: o.Y(v), y2: o.Y(v), stroke: C.grid, "stroke-width": 2 }, g);
+        for (const v of o.xticks) make("line", { x1: o.X(v), x2: o.X(v), y1: o.P.t, y2: o.P.b, stroke: C.grid, "stroke-width": 2 }, g);
+        if (o.yaxis !== false) make("line", { x1: o.P.l, x2: o.P.l, y1: o.P.t, y2: o.P.b, stroke: C.axis, "stroke-width": 2.5 }, g);
+        make("line", { x1: o.P.l, x2: o.P.r, y1: o.P.b, y2: o.P.b, stroke: C.axis, "stroke-width": 2.5 }, g);
+        const label = (txt, attrs) => { const e = make("text", { fill: C.ink, "font-size": 28, ...attrs }, g); e.textContent = txt; };
+        for (const v of o.xticks) label(o.xfmt ? o.xfmt(v) : String(v), { x: o.X(v), y: o.P.b + 44, "text-anchor": "middle" });
+        for (const v of o.yticks) label(String(v), { x: o.P.l - 20, y: o.Y(v) + 10, "text-anchor": "end" });
+        label(o.xlabel, { x: (o.P.l + o.P.r) / 2, y: o.P.b + 100, "text-anchor": "middle", "font-size": 32 });
+        if (o.ylabel) label(o.ylabel, { x: 0, y: 0, "text-anchor": "middle", "font-size": 32,
+                                        transform: `translate(${o.P.l - 92} ${(o.P.t + o.P.b) / 2}) rotate(-90)` });
+        return g;
+      }
+
+      // ---------------------------------------------------------------- scene
+      const D = window.ANIM_DATA;
+      const DUR = 25;
+      const S = D.studies.length;
+
+      // left: data panel
+      const P1 = { l: 200, r: 1060, t: 60, b: 880 };
+      const X1 = scale(0, 12.5, P1.l, P1.r);
+      const Y1 = scale(0, 12, P1.b, P1.t);
+      axes({ P: P1, X: X1, Y: Y1, xticks: [0, 4, 8, 12], yticks: [0, 2, 4, 6, 8, 10, 12],
+             xlabel: "Text length (hundreds of words)", ylabel: "Reading time (minutes)" });
+
+      // right: histogram of estimated slopes
+      const P2 = { l: 1230, r: 1840, t: 60, b: 880 };
+      const LO = 0.64, HI = 0.98, BIN = 0.02;
+      const X2 = scale(LO, HI, P2.l, P2.r);
+      axes({ P: P2, X: X2, Y: () => 0, xticks: [0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95], yticks: [],
+             xfmt: (v) => v.toFixed(2), xlabel: "Estimated slope", yaxis: false });
+
+      // study schedule: five slow studies, then 195 accelerating ones
+      const start = [];
+      for (let k = 0; k < S; k++) start.push(k < 5 ? 0.4 + 1.5 * k : 7.9 + 13.7 * Math.sqrt((k - 5) / (S - 6)));
+      const gap = start.map((s, k) => (k < S - 1 ? start[k + 1] - s : 0.3));
+
+      // histogram stacking (in display order)
+      const counts = {};
+      const stack = D.studies.map((st) => {
+        const bin = Math.floor((st.b - LO) / BIN);
+        const j = counts[bin] || 0;
+        counts[bin] = j + 1;
+        return { bin, j };
+      });
+      const BRICK = 17;
+      const brickTop = (j) => P2.b - (j + 1) * BRICK;
+
+      // paint order: traces (clipped), true line, points, bricks, true slope marker, bracket
+      const clip = make("clipPath", { id: "panel" }, make("defs"));
+      make("rect", { x: P1.l, y: P1.t, width: P1.r - P1.l, height: P1.b - P1.t }, clip);
+      const gLines = make("g", { "clip-path": "url(#panel)" });
+      const lines = D.studies.map(() => make("line", { stroke: C.blue, "stroke-linecap": "butt", opacity: 0 }, gLines));
+      const mu = (x) => D.true.intercept + D.true.slope * x;
+      make("line", { x1: X1(0), y1: Y1(mu(0)), x2: X1(12.5), y2: Y1(mu(12.5)), stroke: C.green,
+                     "stroke-width": 6, "stroke-dasharray": "22 14", "clip-path": "url(#panel)" });
+      const pointSets = D.studies.map((st) => {
+        if (!st.x) return null;
+        const g = make("g", { opacity: 0 });
+        st.x.forEach((x, i) => make("circle", { cx: X1(x), cy: Y1(st.y[i]), r: 10, fill: C.ink }, g));
+        return g;
+      });
+      const gBricks = make("g");
+      const bricks = D.studies.map((st, k) => make("rect", {
+        x: X2(LO + stack[k].bin * BIN) + 3, width: X2(LO + BIN) - X2(LO) - 6, height: BRICK - 3,
+        rx: 3, fill: C.blueFill, opacity: 0 }, gBricks));
+      make("line", { x1: X2(D.true.slope), x2: X2(D.true.slope), y1: P2.t + 90, y2: P2.b,
+                     stroke: C.green, "stroke-width": 5, "stroke-dasharray": "18 12" });
+      const gBracket = make("g", { opacity: 0 });
+      const BY = P2.t + 40;
+      const bracket = make("line", { y1: BY, y2: BY, stroke: C.blue, "stroke-width": 6 }, gBracket);
+      const capL = make("line", { y1: BY - 18, y2: BY + 18, stroke: C.blue, "stroke-width": 6 }, gBracket);
+      const capR = make("line", { y1: BY - 18, y2: BY + 18, stroke: C.blue, "stroke-width": 6 }, gBracket);
+
+      // ---------------------------------------------------------------- timeline
+      function render(t) {
+        const fadeAll = 1 - E.inOut(prog(t, 23.9, 24.9));
+
+        D.studies.forEach((st, k) => {
+          const s = start[k], dt = gap[k];
+          const draw = Math.min(0.4, 0.55 * dt);
+          const hold = Math.min(0.6, 0.5 * dt);
+          const decay = Math.min(0.6, dt);
+
+          // the study's least-squares line: draws in, stays bright, then becomes a faint trace
+          const pd = E.inOut(prog(t, s, s + draw));
+          const fresh = 1 - prog(t, s + draw + hold, s + draw + hold + decay);
+          const xe = 12.5 * pd;
+          set(lines[k], { x1: X1(0), y1: Y1(st.a), x2: X1(xe), y2: Y1(st.a + st.b * xe),
+                          "stroke-width": lerp(3, 7, fresh),
+                          opacity: t >= s ? lerp(0.13, 1, fresh) * fadeAll : 0 });
+
+          // its 40 data points flash in and out (first 40 studies only)
+          if (pointSets[k]) {
+            const op = prog(t, s - 0.12, s + 0.02) * (1 - prog(t, s + draw + hold, s + draw + hold + Math.min(0.35, dt)));
+            set(pointSets[k], { opacity: op });
+          }
+
+          // its slope drops as a brick onto the histogram
+          const t0 = s + draw;
+          const fall = Math.max(0.15, Math.min(0.5, 0.5 * dt));
+          const y = lerp(P2.t + 90, brickTop(stack[k].j), E.fall(prog(t, t0, t0 + fall)));
+          set(bricks[k], { y: y + 1.5, opacity: t >= t0 ? fadeAll : 0 });
+        });
+
+        // 22–23 s: bracket of ±1 SD around the true slope = the standard error
+        const pb = E.out(prog(t, 22.0, 22.9));
+        const half = D.sd * pb;
+        const xl = X2(D.true.slope - half), xr = X2(D.true.slope + half);
+        set(bracket, { x1: xl, x2: xr });
+        set(capL, { x1: xl, x2: xl });
+        set(capR, { x1: xr, x2: xr });
+        set(gBracket, { opacity: pb > 0 ? fadeAll : 0 });
+      }
+
+      const clock = { t: 0 };
+      const tl = gsap.timeline({ paused: true });
+      tl.to(clock, { t: DUR, duration: DUR, ease: "none", onUpdate: () => render(clock.t) }, 0);
+      render(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
